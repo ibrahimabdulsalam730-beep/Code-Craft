@@ -1,13 +1,12 @@
 
 [build]
-  # This tells Netlify which folder to publish.
-  # All your HTML, CSS, and JS files should be in here.
-  publish = "frontend/"
+  # Build command for React + Vite app
+  command = "npm run build"
   
-  # No build command needed for static HTML/CSS/JS
-  command = ""
+  # Publish the built files from dist directory
+  publish = "dist/"
 
-# Redirect rules for SPA-like behavior
+# Redirect rules for React Router (SPA)
 [[redirects]]
   from = "/*"
   to = "/index.html"
