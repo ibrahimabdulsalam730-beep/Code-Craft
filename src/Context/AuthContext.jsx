@@ -11,7 +11,7 @@ export const useAuth = () => {
   return context;
 };
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://shocking-pinkskink.onpella.app/api';
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);

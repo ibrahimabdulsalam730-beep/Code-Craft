@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Calendar, Clock, Mail, User, ArrowLeft, Filter, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../Context/AuthContext';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://shocking-pinkskink.onpella.app/api';
 
 export const AdminPanel = ({ onBack }) => {
   const { currentUser, getAuthHeaders } = useAuth();
