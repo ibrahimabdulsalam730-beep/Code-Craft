@@ -1,16 +1,41 @@
-<<<<<<< HEAD
-# React + Vite
+# Backend API
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the backend API for the project, built with Flask.
 
-Currently, two official plugins are available:
+## Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- `Backend/app.py`: Main Flask application with routes and configuration.
+- `main.py`: Entry point importing the Flask app.
+- `Procfile`: For deployment with Gunicorn.
 
-## Expanding the ESLint configuration
+## Running Locally
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-=======
-# Code-Craft
->>>>>>> a87d460fe26c93dc79f0747272ec02d85dba5fe6
+1. Create and activate a virtual environment.
+2. Install dependencies: `pip install -r Backend/requirements.txt`
+3. Run the app locally:
+   - Using Flask: `python main.py`
+   - Using Gunicorn: `gunicorn main:app --preload --bind 0.0.0.0:5002`
+4. Access the API at `http://localhost:5002/`
+
+## Deployment
+
+- Ensure environment variables are set correctly (e.g., `PORT`, `FLASK_DEBUG`).
+- The `Procfile` runs the app with Gunicorn: `web: gunicorn main:app --preload`
+- Push to your Git repository and deploy to your platform.
+
+## Endpoints
+
+- `/` - Root endpoint returning a welcome message.
+- `/api/health` - Health check endpoint.
+- `/api/register` - User registration.
+- `/api/login` - User login.
+- `/api/logout` - User logout.
+- `/api/users` - List users (admin only).
+- `/api/user/<id>` - Get user details.
+- `/api/stats` - Get user statistics (admin only).
+
+## Notes
+
+- Make sure to keep the directory structure intact.
+- Use the `main.py` as the entry point for Gunicorn.
+- The Flask app runs on the port specified by the `PORT` environment variable or defaults to 5002.
