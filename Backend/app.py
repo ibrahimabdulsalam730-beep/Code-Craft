@@ -41,11 +41,11 @@ limiter = Limiter(
 
 # MySQL Configuration with environment variables
 MYSQL_CONFIG = {
-    'host': os.getenv('MYSQL_HOST', 'bo0wuyoofggbix1ylmbr-mysql.services.clever-cloud.com'),
-    'user': os.getenv('MYSQL_USER', 'u2h6y6jmv6ut5cle'),
-    'password': os.getenv('MYSQL_PASSWORD', 'Ms62ctdILS1wNNiuELyB'),
-    'database': os.getenv('MYSQL_DB', 'bo0wuyoofggbix1ylmbr'),
-    'port': int(os.getenv('MYSQL_PORT', 3306))
+    'host': os.getenv('MYSQL_ADDON_HOST', 'bo0wuyoofggbix1ylmbr-mysql.services.clever-cloud.com'),
+    'user': os.getenv('MYSQL_ADDON_USER', 'u2h6y6jmv6ut5cle'),
+    'password': os.getenv('MYSQL_ADDON_PASSWORD', 'Ms62ctdILSlwNNiuELyB'),
+    'database': os.getenv('MYSQL_ADDON_DB', 'bo0wuyoofggbix1ylmbr'),
+    'port': int(os.getenv('MYSQL_ADDON_PORT', 3306))
 }
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
