@@ -497,10 +497,15 @@ def handle_contact():
             conn.close()
 
 
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({'message': 'Welcome to the Backend API', 'success': True})
+
 if __name__ == '__main__':
     # Clean up expired sessions on startup
     cleanup_sessions()
-    
-    # Run the application on port 5002 instead of 5001
+
+    # Run the application
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(debug=debug_mode, host='0.0.0.0', port=5002)
+    port = int(os.getenv('PORT', 5002))
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
