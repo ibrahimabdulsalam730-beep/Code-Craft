@@ -2,7 +2,7 @@ import requests
 import json
 
 # Test the new backend API
-BASE_URL = "https://kelly-greenrhinoceros.onpella.app"
+BASE_URL = "https://lavenderneurons.onpella.app"
 
 def test_health():
     print("Testing health endpoint...")
