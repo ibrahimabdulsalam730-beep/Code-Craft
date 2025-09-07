@@ -18,7 +18,7 @@ const Contact = () => {
     }
 
     try {
-      const response = await axios.post(getApiUrl('/contact'), { 
+      const response = await axios.post('https://kelly-greenrhinoceros.onpella.app/contact', { 
         message 
       }, {
         headers: {
