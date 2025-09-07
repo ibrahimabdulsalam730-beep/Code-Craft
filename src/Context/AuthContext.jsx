@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../config/api';
 
 const AuthContext = createContext();
 
@@ -10,8 +11,6 @@ export const useAuth = () => {
   }
   return context;
 };
-
-const API_BASE_URL = 'https://shocking-pinkskink.onpella.app/api';
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -38,7 +37,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      const response = await fetch(getApiUrl('/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +71,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/register`, {
+      const response = await fetch(getApiUrl('/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,11 +93,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    setAuthToken(null);
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('authToken');
+  const logout = async () => {
+    try {
+      if (authToken) {
+        await fetch(getApiUrl('/logout'), {
+          method: 'POST',
+          headers: getAuthHeaders(),
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setCurrentUser(null);
+      setAuthToken(null);
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      navigate('/');
+    }
   };
 
   const isAdmin = () => {

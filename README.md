@@ -1,41 +1,55 @@
-# Backend API
+# Code Craft - Full Stack Web Application
 
-This is the backend API for the project, built with Flask.
+A full-stack web application with React frontend and Flask backend, featuring user authentication and admin panel.
 
-## Structure
+## Project Structure
 
-- `Backend/app.py`: Main Flask application with routes and configuration.
-- `main.py`: Entry point importing the Flask app.
-- `Procfile`: For deployment with Gunicorn.
+```
+code-craft-2/
+├── Backend/           # Flask backend API
+│   ├── app.py        # Main Flask application
+│   └── requirements.txt
+├── src/              # React frontend source
+│   ├── components/   # React components
+│   ├── config/       # API configuration
+│   └── Context/      # React context providers
+├── main.py           # Backend entry point
+├── package.json      # Frontend dependencies
+└── netlify.toml      # Netlify deployment config
+```
 
-## Running Locally
+## Deployment Status
 
-1. Create and activate a virtual environment.
-2. Install dependencies: `pip install -r Backend/requirements.txt`
-3. Run the app locally:
-   - Using Flask: `python main.py`
-   - Using Gunicorn: `gunicorn main:app --preload --bind 0.0.0.0:5002`
-4. Access the API at `http://localhost:5002/`
+- **Frontend**: Deployed on Netlify
+- **Backend**: Deployed on Pella.app (https://shocking-pinkskink.onpella.app)
+- **Database**: MySQL on Clever Cloud
 
-## Deployment
+## API Endpoints
 
-- Ensure environment variables are set correctly (e.g., `PORT`, `FLASK_DEBUG`).
-- The `Procfile` runs the app with Gunicorn: `web: gunicorn main:app --preload`
-- Push to your Git repository and deploy to your platform.
+- `GET /` - Welcome message
+- `GET /api/health` - Health check
+- `POST /api/register` - User registration
+- `POST /api/login` - User login
+- `POST /api/logout` - User logout
+- `GET /api/users` - List users (admin only)
+- `GET /api/user/<id>` - Get user details
+- `GET /api/stats` - User statistics (admin only)
+- `POST /contact` - Contact form submission
 
-## Endpoints
+## Local Development
 
-- `/` - Root endpoint returning a welcome message.
-- `/api/health` - Health check endpoint.
-- `/api/register` - User registration.
-- `/api/login` - User login.
-- `/api/logout` - User logout.
-- `/api/users` - List users (admin only).
-- `/api/user/<id>` - Get user details.
-- `/api/stats` - Get user statistics (admin only).
+### Backend
+1. `pip install -r Backend/requirements.txt`
+2. `python main.py`
 
-## Notes
+### Frontend
+1. `npm install`
+2. `npm run dev`
 
-- Make sure to keep the directory structure intact.
-- Use the `main.py` as the entry point for Gunicorn.
-- The Flask app runs on the port specified by the `PORT` environment variable or defaults to 5002.
+## Recent Fixes
+
+- ✅ Cleaned up duplicate folders and files
+- ✅ Fixed CORS configuration for Netlify deployment
+- ✅ Updated API endpoints to use centralized configuration
+- ✅ Fixed authentication flow and logout functionality
+- ✅ Removed unnecessary deployment files

@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import axios from 'axios';
+import { getApiUrl } from './config/api';
 
 const Contact = () => {
   const [message, setMessage] = useState('');
@@ -17,7 +18,7 @@ const Contact = () => {
     }
 
     try {
-      const response = await axios.post('https://shocking-pinkskink.onpella.app/contact', { 
+      const response = await axios.post(getApiUrl('/contact'), { 
         message 
       }, {
         headers: {

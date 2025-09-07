@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import pymysql
-import pymysql.cursors
+import mysql.connector
+from mysql.connector import Error
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
@@ -18,7 +18,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS Configuration for Netlify deployment
+CORS(app, 
+     origins=['https://*.netlify.app', 'https://netlify.app', 'http://localhost:3000', 'http://localhost:5173'],
+     allow_headers=['Content-Type', 'Authorization'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     supports_credentials=True)
 
 #JWT Configuration
 app.config['JWT_SECRET_KEY'] = secrets.token_hex(32)  # Generate a secure secret key
@@ -46,7 +52,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 def get_db_connection():
    """Get database connection"""
-   return pymysql.connect(**MYSQL_CONFIG)
+   return mysql.connector.connect(**MYSQL_CONFIG)
 
 # Session storage (in production, use Redis or database)
 active_sessions = {}
@@ -158,7 +164,7 @@ def register():
             return jsonify({'success': False, 'message': password_message}), 400
         
         connection = get_db_connection()
-        cur = connection.cursor()
+        cur = connection.cursor(dictionary=True)
         
         # Check if user already exists
         cur.execute("SELECT id FROM users WHERE email = %s", (email,))
@@ -215,7 +221,7 @@ def login():
             return jsonify({'success': False, 'message': 'Email and password are required'}), 400
         
         connection = get_db_connection()
-        cur = connection.cursor()
+        cur = connection.cursor(dictionary=True)
         
         # Find user
         cur.execute(
@@ -287,7 +293,7 @@ def logout():
 def get_users():
     try:
         connection = get_db_connection()
-        cur = connection.cursor()
+        cur = connection.cursor(dictionary=True)
         cur.execute("""
             SELECT id, name, email, is_admin, created_at, last_login 
             FROM users 
@@ -326,7 +332,7 @@ def get_user(user_id):
             return jsonify({'success': False, 'message': 'Access denied'}), 403
         
         connection = get_db_connection()
-        cur = connection.cursor()
+        cur = connection.cursor(dictionary=True)
         cur.execute(
             "SELECT id, name, email, is_admin, created_at, last_login FROM users WHERE id = %s",
             (user_id,)
@@ -360,7 +366,7 @@ def get_user(user_id):
 def get_stats():
     try:
         connection = get_db_connection()
-        cur = connection.cursor()
+        cur = connection.cursor(dictionary=True)
         
         # Total users
         cur.execute("SELECT COUNT(*) as total FROM users")
@@ -465,7 +471,7 @@ def handle_contact():
     try:
         # Reuse your Clever Cloud DB connection
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
         # Create table if not exists (one-time operation)
         cursor.execute("""
@@ -500,6 +506,15 @@ def handle_contact():
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({'message': 'Welcome to the Backend API', 'success': True})
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = jsonify()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "*")
+        response.headers.add('Access-Control-Allow-Methods', "*")
+        return response
 
 if __name__ == '__main__':
     # Clean up expired sessions on startup
