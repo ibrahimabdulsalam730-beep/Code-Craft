@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pymysql
+import pymysql.cursors
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
@@ -11,7 +12,6 @@ import re
 import os
 import logging
 from functools import wraps
-import mysql.connector
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,13 +20,13 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# JWT Configuration
+#JWT Configuration
 app.config['JWT_SECRET_KEY'] = secrets.token_hex(32)  # Generate a secure secret key
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)  # Token expires in 1 hour
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)  # Refresh token expires in 30 days
 jwt = JWTManager(app)
 
-# Rate limiting configuration
+#Rate limiting configuration
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
@@ -35,19 +35,18 @@ limiter = Limiter(
 
 # MySQL Configuration with environment variables
 MYSQL_CONFIG = {
-    'host': os.getenv('MYSQL_HOST', 'localhost'),
-    'user': os.getenv('MYSQL_USER', 'root'),
-    'password': os.getenv('MYSQL_PASSWORD', 'salam462'),
-    'database': os.getenv('MYSQL_DB', 'login_system'),
-    'cursorclass': pymysql.cursors.DictCursor,
-    'autocommit': False
+    'host': os.getenv('MYSQL_HOST', 'bo0wuyoofggbix1ylmbr-mysql.services.clever-cloud.com'),
+    'user': os.getenv('MYSQL_USER', 'u2h6y6jmv6ut5cle'),
+    'password': os.getenv('MYSQL_PASSWORD', 'Ms62ctdILS1wNNiuELyB'),
+    'database': os.getenv('MYSQL_DB', 'bo0wuyoofggbix1ylmbr'),
+    'port': int(os.getenv('MYSQL_PORT', 3306))
 }
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 def get_db_connection():
-    """Get database connection"""
-    return pymysql.connect(**MYSQL_CONFIG)
+   """Get database connection"""
+   return pymysql.connect(**MYSQL_CONFIG)
 
 # Session storage (in production, use Redis or database)
 active_sessions = {}
@@ -120,24 +119,23 @@ def require_admin(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Token refresh endpoint
-@app.route('/api/refresh', methods=['POST'])
-@jwt_required(refresh=True)
-def refresh():
-    try:
-        current_user_id = get_jwt_identity()
-        access_token = create_access_token(identity=current_user_id)
-        return jsonify({
-            'success': True,
-            'access_token': access_token
-        }), 200
-    except Exception as e:
-        logger.error(f"Error in refresh: {str(e)}")
-        return jsonify({'success': False, 'message': 'Token refresh failed'}), 500
+# # Token refresh endpoint
+# @app.route('/api/refresh', methods=['POST'])
+# @jwt_required(refresh=True)
+# def refresh():
+#     try:
+#         current_user_id = get_jwt_identity()
+#         access_token = create_access_token(identity=current_user_id)
+#         return jsonify({
+#             'success': True,
+#             'access_token': access_token
+#         }), 200
+#     except Exception as e:
+#         logger.error(f"Error in refresh: {str(e)}")
+#         return jsonify({'success': False, 'message': 'Token refresh failed'}), 500
 
 # Routes
 @app.route('/api/register', methods=['POST'])
-@limiter.limit("5 per minute")
 def register():
     try:
         data = request.get_json()
@@ -204,7 +202,6 @@ def register():
         return jsonify({'success': False, 'message': 'Server error occurred'}), 500
 
 @app.route('/api/login', methods=['POST'])
-@limiter.limit("10 per minute")
 def login():
     try:
         data = request.get_json()
@@ -462,20 +459,14 @@ def handle_contact():
     
     if not message:
         return jsonify({'error': 'Message cannot be empty'}), 400
-    
+
     conn = None
     cursor = None
     try:
-        # Use your existing database connection details
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="salam462",
-            database="login_system",
-            port=3306
-        )
+        # Reuse your Clever Cloud DB connection
+        conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         # Create table if not exists (one-time operation)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS contact_messages (
@@ -484,16 +475,16 @@ def handle_contact():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        
+
         # Insert the message
         cursor.execute(
             'INSERT INTO contact_messages (message) VALUES (%s)',
             (message,)
         )
         conn.commit()
-        
+
         return jsonify({'success': 'Message received successfully'}), 200
-        
+
     except Exception as e:
         if conn:
             conn.rollback()
@@ -505,10 +496,11 @@ def handle_contact():
         if conn:
             conn.close()
 
+
 if __name__ == '__main__':
     # Clean up expired sessions on startup
     cleanup_sessions()
     
-    # Run the application
+    # Run the application on port 5002 instead of 5001
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    app.run(debug=debug_mode, host='0.0.0.0', port=5002)
