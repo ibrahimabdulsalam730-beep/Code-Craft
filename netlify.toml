@@ -1,0 +1,9 @@
+
+[build]
+  # This tells Netlify which folder to publish.
+  # All your HTML, CSS, and JS files should be in here.
+  publish = "frontend/"
+
+  # If your frontend is just plain HTML/CSS/JS, you don't need a build command.
+  # If you were using a framework like React, it would be "npm run build".
+  # command = "" # No command needed for a simple static site
