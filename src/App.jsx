@@ -13,8 +13,8 @@ import About from './About.jsx';
 import { AuthProvider, useAuth } from './Context/AuthContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { RegisterForm } from './components/Auth/RegisterForm';
-import { Dashboard } from './components/Dashboard/dashboard';
-import { AdminPanel } from './components/admin/AdminPanel';
+import { Dashboard } from './components/Dashboard/Dashboard';
+import { AdminPanel } from './components/Admin/AdminPanel';
 
 const AuthenticationScreen = () => {
   const [authMode, setAuthMode] = useState('login');
