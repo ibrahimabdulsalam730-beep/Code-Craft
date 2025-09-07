@@ -1,0 +1,5 @@
+- [x] Remove PyMySQL from requirements.txt
+- [ ] Update app.py import to mysql.connector
+- [ ] Update MYSQL_CONFIG for mysql.connector
+- [ ] Update get_db_connection to use mysql.connector
+- [ ] Test database connection
