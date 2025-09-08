@@ -21,8 +21,8 @@ code-craft-2/
 ## Deployment Status
 
 - **Frontend**: Deployed on Netlify
-- **Backend**: Deployed on Pella.app (https://shocking-pinkskink.onpella.app)
-- **Database**: MySQL on Clever Cloud
+- **Backend**: Deployed on Pella.app (https://tancentipede.onpella.app)
+- **Database**: MySQL on InfinityFree
 
 ## API Endpoints
 

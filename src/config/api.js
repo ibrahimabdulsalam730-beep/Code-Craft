@@ -2,8 +2,8 @@
 const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 export const API_CONFIG = {
-  BASE_URL: isDevelopment ? 'http://localhost:5000' : 'https://fern-greenseahorse.onpella.app',
-  API_BASE_URL: isDevelopment ? 'http://localhost:5000/api' : 'https://fern-greenseahorse.onpella.app/api',
+  BASE_URL: isDevelopment ? 'http://localhost:5000' : 'https://tancentipede.onpella.app',
+  API_BASE_URL: isDevelopment ? 'http://localhost:5000/api' : 'https://tancentipede.onpella.app/api',
   TIMEOUT: 10000, // 10 seconds
 };
 

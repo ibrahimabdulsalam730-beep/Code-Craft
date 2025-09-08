@@ -26,7 +26,7 @@ allowed_origins = [
     'http://localhost:5173',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
-    'https://tancentipede.onpella.app',
+    'https://fern-greenseahorse.onpella.app',
 ]
 
 CORS(app, 
@@ -45,7 +45,7 @@ jwt = JWTManager(app)
 MYSQL_CONFIG = {
     'host': os.getenv('DB_HOST', 'sql308.infinityfree.com'),
     'user': os.getenv('DB_USER', 'if0_39895620'),
-    'password': os.getenv('DB_PASSWORD', 'km6BIlaPEx'),
+    'password': os.getenv('DB_PASSWORD', 'km6BIIaPEx'),
     'database': os.getenv('DB_NAME', 'if0_39895620_codecraft'),
     'port': int(os.getenv('DB_PORT', 3306))
 }
