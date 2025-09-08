@@ -2,8 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+# from flask_limiter import Limiter
+# from flask_limiter.util import get_remote_address
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 import bcrypt
@@ -47,12 +47,12 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)  # Token expires in 
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)  # Refresh token expires in 30 days
 jwt = JWTManager(app)
 
-#Rate limiting configuration
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
+#Rate limiting configuration (disabled for deployment)
+# limiter = Limiter(
+#     app=app,
+#     key_func=get_remote_address,
+#     default_limits=["200 per day", "50 per hour"]
+# )
 
 # MySQL Configuration for InfinityFree
 MYSQL_CONFIG = {
@@ -461,9 +461,9 @@ def health_check():
             'error': 'Database connection failed'
         }), 500
 
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({'success': False, 'message': 'Rate limit exceeded. Please try again later.'}), 429
+# @app.errorhandler(429)
+# def ratelimit_handler(e):
+#     return jsonify({'success': False, 'message': 'Rate limit exceeded. Please try again later.'}), 429
 
 @app.errorhandler(404)
 def not_found(e):
