@@ -31,7 +31,7 @@ allowed_origins = [
     'http://localhost:5173',  # Vite dev server
     'http://127.0.0.1:3000',  # Alternative localhost
     'http://127.0.0.1:5173',  # Alternative localhost
-    'https://viridianowl.onpella.app',  # Backend URL (for self-reference)
+    'https://fern-greenseahorse.onpella.app',  # Backend URL (for self-reference)
 ]
 
 CORS(app, 
