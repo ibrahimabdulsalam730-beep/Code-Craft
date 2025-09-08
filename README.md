@@ -21,7 +21,7 @@ code-craft-2/
 ## Deployment Status
 
 - **Frontend**: Deployed on Netlify
-- **Backend**: Deployed on Pella.app (https://tancentipede.onpella.app)
+- **Backend**: Deployed on Pella.app (https://terra-cottapigeon.onpella.app)
 - **Database**: MySQL on InfinityFree
 
 ## API Endpoints
