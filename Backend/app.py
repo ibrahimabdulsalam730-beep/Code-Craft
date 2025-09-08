@@ -2,8 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
-# from flask_limiter import Limiter
-# from flask_limiter.util import get_remote_address
+
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 import bcrypt
