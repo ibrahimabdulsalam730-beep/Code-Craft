@@ -18,7 +18,7 @@ const Contact = () => {
     }
 
     try {
-      const response = await axios.post('https://lavenderneurons.onpella.app/contact', { 
+      const response = await axios.post('https://ibra445him.pythonanywhere.com/contact', { 
         message 
       }, {
         headers: {

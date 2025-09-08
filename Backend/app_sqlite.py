@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import mysql.connector
-from mysql.connector import Error
+import sqlite3
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
@@ -12,10 +11,6 @@ import re
 import os
 import logging
 from functools import wraps
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,18 +21,14 @@ app = Flask(__name__)
 # CORS Configuration
 allowed_origins = [
     'https://codeccraftt.netlify.app',  # Your frontend on Netlify
-    'https://codeccraft.netlify.app',  # Your actual Netlify URL
     'https://*.netlify.app',  # Netlify wildcard (backup)
     'http://localhost:3000',  # React dev server
     'http://localhost:5173',  # Vite dev server
-    'http://127.0.0.1:3000',  # Alternative localhost
-    'http://127.0.0.1:5173',  # Alternative localhost
-    'https://viridianowl.onpella.app',  # Backend URL (for self-reference)
 ]
 
 CORS(app, 
      origins=allowed_origins,
-     allow_headers=['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
+     allow_headers=['Content-Type', 'Authorization'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      supports_credentials=True)
 
@@ -54,31 +45,55 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
-# MySQL Configuration for InfinityFree
-MYSQL_CONFIG = {
-    'host': os.getenv('DB_HOST', 'sql308.infinityfree.com'),
-    'user': os.getenv('DB_USER', 'if0_39895620'),
-    'password': os.getenv('DB_PASSWORD', 'km6BIIaPEx'),
-    'database': os.getenv('DB_NAME', 'if0_39895620_codecraft'),
-    'port': int(os.getenv('DB_PORT', 3306))
-}
+# SQLite Configuration
+DATABASE_PATH = os.getenv('DATABASE_PATH', 'app_database.db')
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 def get_db_connection():
-   """Get database connection with retry logic"""
-   try:
-       connection = mysql.connector.connect(
-           **MYSQL_CONFIG,
-           connect_timeout=10,
-           autocommit=False,
-           charset='utf8mb4',
-           use_unicode=True
-       )
-       return connection
-   except Error as e:
-       logger.error(f"Database connection error: {str(e)}")
-       raise
+    """Get SQLite database connection"""
+    try:
+        connection = sqlite3.connect(DATABASE_PATH)
+        connection.row_factory = sqlite3.Row
+        return connection
+    except Exception as e:
+        logger.error(f"Database connection error: {str(e)}")
+        raise
+
+def init_database():
+    """Initialize database tables"""
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Create users table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP
+            )
+        ''')
+        
+        # Create contact_messages table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contact_messages (
+                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        connection.commit()
+        connection.close()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization error: {str(e)}")
+        raise
 
 # Session storage (in production, use Redis or database)
 active_sessions = {}
@@ -114,7 +129,7 @@ def sanitize_input(text):
     """Basic input sanitization"""
     if not text:
         return ""
-    return re.sub(r'[<>"\']', '', str(text).strip())
+    return re.sub(r'[<>"\'']', '', str(text).strip())
 
 def generate_session_token():
     """Generate a secure session token"""
@@ -151,21 +166,6 @@ def require_admin(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# # Token refresh endpoint
-# @app.route('/api/refresh', methods=['POST'])
-# @jwt_required(refresh=True)
-# def refresh():
-#     try:
-#         current_user_id = get_jwt_identity()
-#         access_token = create_access_token(identity=current_user_id)
-#         return jsonify({
-#             'success': True,
-#             'access_token': access_token
-#         }), 200
-#     except Exception as e:
-#         logger.error(f"Error in refresh: {str(e)}")
-#         return jsonify({'success': False, 'message': 'Token refresh failed'}), 500
-
 # Routes
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -190,10 +190,10 @@ def register():
             return jsonify({'success': False, 'message': password_message}), 400
         
         connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
+        cur = connection.cursor()
         
         # Check if user already exists
-        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        cur.execute("SELECT id FROM users WHERE email = ?", (email,))
         if cur.fetchone():
             cur.close()
             connection.close()
@@ -202,14 +202,14 @@ def register():
         # Create new user
         hashed_password = hash_password(password)
         cur.execute(
-            "INSERT INTO users (name, email, password, created_at, last_login) VALUES (%s, %s, %s, %s, %s)",
-            (name, email, hashed_password, datetime.now(), datetime.now())
+            "INSERT INTO users (name, email, password, created_at, last_login) VALUES (?, ?, ?, ?, ?)",
+            (name, email, hashed_password, datetime.now().isoformat(), datetime.now().isoformat())
         )
         connection.commit()
         
         # Get the created user
         user_id = cur.lastrowid
-        cur.execute("SELECT id, name, email, is_admin, created_at, last_login FROM users WHERE id = %s", (user_id,))
+        cur.execute("SELECT id, name, email, is_admin, created_at, last_login FROM users WHERE id = ?", (user_id,))
         user = cur.fetchone()
         cur.close()
         connection.close()
@@ -220,12 +220,12 @@ def register():
             'success': True,
             'message': 'Account created successfully',
             'user': {
-                'id': user['id'],
-                'name': user['name'],
-                'email': user['email'],
-                'isAdmin': bool(user['is_admin']),
-                'createdAt': user['created_at'].isoformat(),
-                'lastLogin': user['last_login'].isoformat() if user['last_login'] else None
+                'id': user[0],
+                'name': user[1],
+                'email': user[2],
+                'isAdmin': bool(user[3]),
+                'createdAt': user[4],
+                'lastLogin': user[5] if user[5] else None
             }
         }), 201
         
@@ -247,23 +247,23 @@ def login():
             return jsonify({'success': False, 'message': 'Email and password are required'}), 400
         
         connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
+        cur = connection.cursor()
         
         # Find user
         cur.execute(
-            "SELECT id, name, email, password, is_admin, created_at, last_login FROM users WHERE email = %s",
+            "SELECT id, name, email, password, is_admin, created_at, last_login FROM users WHERE email = ?",
             (email,)
         )
         user = cur.fetchone()
         
-        if not user or not verify_password(password, user['password']):
+        if not user or not verify_password(password, user[3]):
             cur.close()
             connection.close()
             logger.warning(f"Failed login attempt for email: {email}")
             return jsonify({'success': False, 'message': 'Invalid email or password'}), 401
         
         # Update last login
-        cur.execute("UPDATE users SET last_login = %s WHERE id = %s", (datetime.now(), user['id']))
+        cur.execute("UPDATE users SET last_login = ? WHERE id = ?", (datetime.now().isoformat(), user[0]))
         connection.commit()
         cur.close()
         connection.close()
@@ -271,11 +271,11 @@ def login():
         # Create session
         session_token = generate_session_token()
         user_data = {
-            'id': user['id'],
-            'name': user['name'],
-            'email': user['email'],
-            'isAdmin': bool(user['is_admin']),
-            'createdAt': user['created_at'].isoformat(),
+            'id': user[0],
+            'name': user[1],
+            'email': user[2],
+            'isAdmin': bool(user[4]),
+            'createdAt': user[5],
             'lastLogin': datetime.now().isoformat()
         }
         
@@ -313,129 +313,6 @@ def logout():
         logger.error(f"Logout error: {str(e)}")
         return jsonify({'success': False, 'message': 'Server error occurred'}), 500
 
-@app.route('/api/users', methods=['GET'])
-@require_auth
-@require_admin
-def get_users():
-    try:
-        connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
-        cur.execute("""
-            SELECT id, name, email, is_admin, created_at, last_login 
-            FROM users 
-            ORDER BY created_at DESC
-        """)
-        users = cur.fetchall()
-        cur.close()
-        connection.close()
-        
-        formatted_users = []
-        for user in users:
-            formatted_users.append({
-                'id': user['id'],
-                'name': user['name'],
-                'email': user['email'],
-                'isAdmin': bool(user['is_admin']),
-                'createdAt': user['created_at'].isoformat(),
-                'lastLogin': user['last_login'].isoformat() if user['last_login'] else None
-            })
-        
-        return jsonify({
-            'success': True,
-            'users': formatted_users
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get users error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error occurred'}), 500
-
-@app.route('/api/user/<int:user_id>', methods=['GET'])
-@require_auth
-def get_user(user_id):
-    try:
-        # Users can only view their own profile unless they're admin
-        if request.current_user['id'] != user_id and not request.current_user.get('isAdmin', False):
-            return jsonify({'success': False, 'message': 'Access denied'}), 403
-        
-        connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
-        cur.execute(
-            "SELECT id, name, email, is_admin, created_at, last_login FROM users WHERE id = %s",
-            (user_id,)
-        )
-        user = cur.fetchone()
-        cur.close()
-        connection.close()
-        
-        if not user:
-            return jsonify({'success': False, 'message': 'User not found'}), 404
-        
-        return jsonify({
-            'success': True,
-            'user': {
-                'id': user['id'],
-                'name': user['name'],
-                'email': user['email'],
-                'isAdmin': bool(user['is_admin']),
-                'createdAt': user['created_at'].isoformat(),
-                'lastLogin': user['last_login'].isoformat() if user['last_login'] else None
-            }
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get user error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error occurred'}), 500
-
-@app.route('/api/stats', methods=['GET'])
-@require_auth
-@require_admin
-def get_stats():
-    try:
-        connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
-        
-        # Total users
-        cur.execute("SELECT COUNT(*) as total FROM users")
-        total_users = cur.fetchone()['total']
-        
-        # Active users (logged in within last 30 days)
-        cur.execute("""
-            SELECT COUNT(*) as active 
-            FROM users 
-            WHERE last_login >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        """)
-        active_users = cur.fetchone()['active']
-        
-        # Admin users
-        cur.execute("SELECT COUNT(*) as admins FROM users WHERE is_admin = TRUE")
-        admin_users = cur.fetchone()['admins']
-        
-        # New users this week
-        cur.execute("""
-            SELECT COUNT(*) as new_users 
-            FROM users 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        """)
-        new_users = cur.fetchone()['new_users']
-        
-        cur.close()
-        connection.close()
-        
-        return jsonify({
-            'success': True,
-            'stats': {
-                'totalUsers': total_users,
-                'activeUsers': active_users,
-                'adminUsers': admin_users,
-                'newUsers': new_users,
-                'activeSessions': len(active_sessions)
-            }
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get stats error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error occurred'}), 500
-
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
@@ -461,29 +338,6 @@ def health_check():
             'error': 'Database connection failed'
         }), 500
 
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({'success': False, 'message': 'Rate limit exceeded. Please try again later.'}), 429
-
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({'success': False, 'message': 'Endpoint not found'}), 404
-
-@app.errorhandler(500)
-def internal_error(e):
-    logger.error(f"Internal server error: {str(e)}")
-    return jsonify({'success': False, 'message': 'Internal server error'}), 500
-
-def cleanup_sessions():
-    """Clean up expired sessions"""
-    current_time = datetime.now()
-    expired_tokens = [token for token, data in active_sessions.items() 
-                     if current_time > data['expires']]
-    for token in expired_tokens:
-        del active_sessions[token]
-    logger.info(f"Cleaned up {len(expired_tokens)} expired sessions")
-
-
 @app.route('/contact', methods=['POST'])
 def handle_contact():
     data = request.get_json()
@@ -492,42 +346,24 @@ def handle_contact():
     if not message:
         return jsonify({'error': 'Message cannot be empty'}), 400
 
-    conn = None
-    cursor = None
     try:
-        # Reuse your Clever Cloud DB connection
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        # Create table if not exists (one-time operation)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS contact_messages (
-                message_id INT AUTO_INCREMENT PRIMARY KEY,
-                message TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        cursor = conn.cursor()
 
         # Insert the message
         cursor.execute(
-            'INSERT INTO contact_messages (message) VALUES (%s)',
+            'INSERT INTO contact_messages (message) VALUES (?)',
             (message,)
         )
         conn.commit()
+        cursor.close()
+        conn.close()
 
         return jsonify({'success': 'Message received successfully'}), 200
 
     except Exception as e:
-        if conn:
-            conn.rollback()
         print(f"Contact form error: {str(e)}")
         return jsonify({'error': str(e)}), 500
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
 
 @app.route('/', methods=['GET'])
 def root():
@@ -537,17 +373,15 @@ def root():
 def handle_preflight():
     if request.method == "OPTIONS":
         response = jsonify()
-        origin = request.headers.get('Origin')
-        if origin in allowed_origins or any(origin.endswith(domain.replace('https://*', '')) for domain in allowed_origins if '*' in domain):
-            response.headers.add("Access-Control-Allow-Origin", origin)
-        else:
-            response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
-        response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization")
-        response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS")
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "*")
+        response.headers.add('Access-Control-Allow-Methods', "*")
         return response
 
 if __name__ == '__main__':
+    # Initialize database
+    init_database()
+
     # Run the application
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     port = int(os.getenv('PORT', 5000))

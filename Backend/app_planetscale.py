@@ -12,10 +12,6 @@ import re
 import os
 import logging
 from functools import wraps
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,13 +50,15 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
-# MySQL Configuration for InfinityFree
+# PlanetScale MySQL Configuration - Replace with your PlanetScale credentials
 MYSQL_CONFIG = {
-    'host': os.getenv('DB_HOST', 'sql308.infinityfree.com'),
-    'user': os.getenv('DB_USER', 'if0_39895620'),
-    'password': os.getenv('DB_PASSWORD', 'km6BIIaPEx'),
-    'database': os.getenv('DB_NAME', 'if0_39895620_codecraft'),
-    'port': int(os.getenv('DB_PORT', 3306))
+    'host': os.getenv('DATABASE_HOST', 'your-planetscale-host'),
+    'user': os.getenv('DATABASE_USERNAME', 'your-planetscale-user'),
+    'password': os.getenv('DATABASE_PASSWORD', 'your-planetscale-password'),
+    'database': os.getenv('DATABASE_NAME', 'codecraft'),
+    'port': int(os.getenv('DATABASE_PORT', 3306)),
+    'ssl_disabled': False,
+    'autocommit': True
 }
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -71,7 +69,6 @@ def get_db_connection():
        connection = mysql.connector.connect(
            **MYSQL_CONFIG,
            connect_timeout=10,
-           autocommit=False,
            charset='utf8mb4',
            use_unicode=True
        )
@@ -114,7 +111,7 @@ def sanitize_input(text):
     """Basic input sanitization"""
     if not text:
         return ""
-    return re.sub(r'[<>"\']', '', str(text).strip())
+    return re.sub(r'[<>"\'']', '', str(text).strip())
 
 def generate_session_token():
     """Generate a secure session token"""
@@ -151,20 +148,44 @@ def require_admin(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# # Token refresh endpoint
-# @app.route('/api/refresh', methods=['POST'])
-# @jwt_required(refresh=True)
-# def refresh():
-#     try:
-#         current_user_id = get_jwt_identity()
-#         access_token = create_access_token(identity=current_user_id)
-#         return jsonify({
-#             'success': True,
-#             'access_token': access_token
-#         }), 200
-#     except Exception as e:
-#         logger.error(f"Error in refresh: {str(e)}")
-#         return jsonify({'success': False, 'message': 'Token refresh failed'}), 500
+def init_database():
+    """Initialize database tables"""
+    try:
+        connection = get_db_connection()
+        cur = connection.cursor()
+        
+        # Create users table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP NULL,
+                INDEX idx_email (email),
+                INDEX idx_created_at (created_at),
+                INDEX idx_last_login (last_login)
+            )
+        ''')
+        
+        # Create contact_messages table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS contact_messages (
+                message_id INT AUTO_INCREMENT PRIMARY KEY,
+                message TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status ENUM('unread', 'read', 'archived') DEFAULT 'unread'
+            )
+        ''')
+        
+        cur.close()
+        connection.close()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization error: {str(e)}")
+        raise
 
 # Routes
 @app.route('/api/register', methods=['POST'])
@@ -205,7 +226,6 @@ def register():
             "INSERT INTO users (name, email, password, created_at, last_login) VALUES (%s, %s, %s, %s, %s)",
             (name, email, hashed_password, datetime.now(), datetime.now())
         )
-        connection.commit()
         
         # Get the created user
         user_id = cur.lastrowid
@@ -264,7 +284,6 @@ def login():
         
         # Update last login
         cur.execute("UPDATE users SET last_login = %s WHERE id = %s", (datetime.now(), user['id']))
-        connection.commit()
         cur.close()
         connection.close()
         
@@ -313,129 +332,6 @@ def logout():
         logger.error(f"Logout error: {str(e)}")
         return jsonify({'success': False, 'message': 'Server error occurred'}), 500
 
-@app.route('/api/users', methods=['GET'])
-@require_auth
-@require_admin
-def get_users():
-    try:
-        connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
-        cur.execute("""
-            SELECT id, name, email, is_admin, created_at, last_login 
-            FROM users 
-            ORDER BY created_at DESC
-        """)
-        users = cur.fetchall()
-        cur.close()
-        connection.close()
-        
-        formatted_users = []
-        for user in users:
-            formatted_users.append({
-                'id': user['id'],
-                'name': user['name'],
-                'email': user['email'],
-                'isAdmin': bool(user['is_admin']),
-                'createdAt': user['created_at'].isoformat(),
-                'lastLogin': user['last_login'].isoformat() if user['last_login'] else None
-            })
-        
-        return jsonify({
-            'success': True,
-            'users': formatted_users
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get users error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error occurred'}), 500
-
-@app.route('/api/user/<int:user_id>', methods=['GET'])
-@require_auth
-def get_user(user_id):
-    try:
-        # Users can only view their own profile unless they're admin
-        if request.current_user['id'] != user_id and not request.current_user.get('isAdmin', False):
-            return jsonify({'success': False, 'message': 'Access denied'}), 403
-        
-        connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
-        cur.execute(
-            "SELECT id, name, email, is_admin, created_at, last_login FROM users WHERE id = %s",
-            (user_id,)
-        )
-        user = cur.fetchone()
-        cur.close()
-        connection.close()
-        
-        if not user:
-            return jsonify({'success': False, 'message': 'User not found'}), 404
-        
-        return jsonify({
-            'success': True,
-            'user': {
-                'id': user['id'],
-                'name': user['name'],
-                'email': user['email'],
-                'isAdmin': bool(user['is_admin']),
-                'createdAt': user['created_at'].isoformat(),
-                'lastLogin': user['last_login'].isoformat() if user['last_login'] else None
-            }
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get user error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error occurred'}), 500
-
-@app.route('/api/stats', methods=['GET'])
-@require_auth
-@require_admin
-def get_stats():
-    try:
-        connection = get_db_connection()
-        cur = connection.cursor(dictionary=True)
-        
-        # Total users
-        cur.execute("SELECT COUNT(*) as total FROM users")
-        total_users = cur.fetchone()['total']
-        
-        # Active users (logged in within last 30 days)
-        cur.execute("""
-            SELECT COUNT(*) as active 
-            FROM users 
-            WHERE last_login >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        """)
-        active_users = cur.fetchone()['active']
-        
-        # Admin users
-        cur.execute("SELECT COUNT(*) as admins FROM users WHERE is_admin = TRUE")
-        admin_users = cur.fetchone()['admins']
-        
-        # New users this week
-        cur.execute("""
-            SELECT COUNT(*) as new_users 
-            FROM users 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        """)
-        new_users = cur.fetchone()['new_users']
-        
-        cur.close()
-        connection.close()
-        
-        return jsonify({
-            'success': True,
-            'stats': {
-                'totalUsers': total_users,
-                'activeUsers': active_users,
-                'adminUsers': admin_users,
-                'newUsers': new_users,
-                'activeSessions': len(active_sessions)
-            }
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get stats error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Server error occurred'}), 500
-
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
@@ -461,29 +357,6 @@ def health_check():
             'error': 'Database connection failed'
         }), 500
 
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({'success': False, 'message': 'Rate limit exceeded. Please try again later.'}), 429
-
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({'success': False, 'message': 'Endpoint not found'}), 404
-
-@app.errorhandler(500)
-def internal_error(e):
-    logger.error(f"Internal server error: {str(e)}")
-    return jsonify({'success': False, 'message': 'Internal server error'}), 500
-
-def cleanup_sessions():
-    """Clean up expired sessions"""
-    current_time = datetime.now()
-    expired_tokens = [token for token, data in active_sessions.items() 
-                     if current_time > data['expires']]
-    for token in expired_tokens:
-        del active_sessions[token]
-    logger.info(f"Cleaned up {len(expired_tokens)} expired sessions")
-
-
 @app.route('/contact', methods=['POST'])
 def handle_contact():
     data = request.get_json()
@@ -492,42 +365,23 @@ def handle_contact():
     if not message:
         return jsonify({'error': 'Message cannot be empty'}), 400
 
-    conn = None
-    cursor = None
     try:
-        # Reuse your Clever Cloud DB connection
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-
-        # Create table if not exists (one-time operation)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS contact_messages (
-                message_id INT AUTO_INCREMENT PRIMARY KEY,
-                message TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
 
         # Insert the message
         cursor.execute(
             'INSERT INTO contact_messages (message) VALUES (%s)',
             (message,)
         )
-        conn.commit()
+        cursor.close()
+        conn.close()
 
         return jsonify({'success': 'Message received successfully'}), 200
 
     except Exception as e:
-        if conn:
-            conn.rollback()
         print(f"Contact form error: {str(e)}")
         return jsonify({'error': str(e)}), 500
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
 
 @app.route('/', methods=['GET'])
 def root():
@@ -548,6 +402,9 @@ def handle_preflight():
         return response
 
 if __name__ == '__main__':
+    # Initialize database
+    init_database()
+    
     # Run the application
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     port = int(os.getenv('PORT', 5000))
