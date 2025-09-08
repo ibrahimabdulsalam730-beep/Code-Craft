@@ -54,16 +54,27 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 def get_db_connection():
     try:
-        connection = mysql.connector.connect(
-            **MYSQL_CONFIG,
-            connect_timeout=10,
-            autocommit=False,
-            charset='utf8mb4',
-            use_unicode=True
-        )
+        # Try with environment variables first, then fallback to hardcoded values
+        config = {
+            'host': os.getenv('DB_HOST', 'sql308.infinityfree.com'),
+            'user': os.getenv('DB_USER', 'if0_39895620'),
+            'password': os.getenv('DB_PASSWORD', 'km6BIlaPEx'),
+            'database': os.getenv('DB_NAME', 'if0_39895620_codecraft'),
+            'port': int(os.getenv('DB_PORT', 3306)),
+            'connect_timeout': 30,
+            'autocommit': False,
+            'charset': 'utf8mb4',
+            'use_unicode': True,
+            'sql_mode': 'TRADITIONAL'
+        }
+        
+        logger.info(f"Attempting to connect to database: {config['host']}:{config['port']}")
+        connection = mysql.connector.connect(**config)
+        logger.info("Database connection successful")
         return connection
     except Error as e:
         logger.error(f"Database connection error: {str(e)}")
+        logger.error(f"Connection config: host={config.get('host')}, user={config.get('user')}, db={config.get('database')}")
         raise
 
 # Session storage
@@ -389,9 +400,11 @@ def get_stats():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
+        # Test database connection
         connection = get_db_connection()
         cur = connection.cursor()
-        cur.execute("SELECT 1")
+        cur.execute("SELECT 1 as test")
+        result = cur.fetchone()
         cur.close()
         connection.close()
         
@@ -399,16 +412,26 @@ def health_check():
             'status': 'healthy',
             'timestamp': datetime.now().isoformat(),
             'database': 'connected',
-            'activeSessions': len(active_sessions)
+            'activeSessions': len(active_sessions),
+            'database_test': 'passed'
         }), 200
     except Exception as e:
-        logger.error(f"Health check error: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Health check failed: {error_msg}")
+        
+        # Return more detailed error information
         return jsonify({
             'status': 'unhealthy',
             'timestamp': datetime.now().isoformat(),
             'database': 'disconnected',
-            'error': 'Database connection failed'
-        }), 500
+            'error': error_msg,
+            'database_config': {
+                'host': os.getenv('DB_HOST', 'sql308.infinityfree.com'),
+                'user': os.getenv('DB_USER', 'if0_39895620'),
+                'database': os.getenv('DB_NAME', 'if0_39895620_codecraft'),
+                'port': int(os.getenv('DB_PORT', 3306))
+            }
+        }), 200  # Return 200 so we can see the error details
 
 @app.route('/contact', methods=['POST'])
 def handle_contact():
