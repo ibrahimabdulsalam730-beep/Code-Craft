@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, Clock, Mail, User, ArrowLeft, Filter, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../Context/AuthContext';
-
-const API_BASE_URL = 'https://shocking-pinkskink.onpella.app/api';
+import { getApiUrl } from '../../config/api';
 
 export const AdminPanel = ({ onBack }) => {
   const { currentUser, getAuthHeaders } = useAuth();
@@ -36,14 +35,14 @@ export const AdminPanel = ({ onBack }) => {
       const headers = getAuthHeaders();
       
       // Load users
-      const usersResponse = await fetch(`${API_BASE_URL}/users`, {
+      const usersResponse = await fetch(getApiUrl('/users'), {
         method: 'GET',
         headers: headers
       });
       const usersData = await usersResponse.json();
       
       // Load stats
-      const statsResponse = await fetch(`${API_BASE_URL}/stats`, {
+      const statsResponse = await fetch(getApiUrl('/stats'), {
         method: 'GET',
         headers: headers
       });

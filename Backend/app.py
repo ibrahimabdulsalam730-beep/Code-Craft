@@ -20,7 +20,7 @@ allowed_origins = [
     'https://*.netlify.app',
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://redwolf.onpella.app',
+    'https://celadonbuffalo.onpella.app',
 ]
 
 CORS(app, origins=allowed_origins, allow_headers=['Content-Type', 'Authorization'], 
