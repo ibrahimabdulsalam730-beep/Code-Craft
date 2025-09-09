@@ -1,6 +1,6 @@
 # Code Craft - Full Stack Web Application
 
-A full-stack web application with React frontend and Flask backend, featuring user authentication and admin panel.
+A full-stack web application with a React frontend and a Flask backend, featuring user authentication, an admin panel, and more.
 
 ## Project Structure
 

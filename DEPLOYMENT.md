@@ -1,5 +1,6 @@
-# Deployment Guide for Pella.app
+# Deployment Guide
 
+## Environment Variables to Set on Pella.app (or other hosting):
 ## Environment Variables to Set on Pella.app:
 
 ```
@@ -16,7 +17,7 @@ PORT=5000
 ## Steps:
 1. Go to your Pella.app dashboard
 2. Navigate to Environment Variables section
-3. Add each variable above
+3. Add or verify each variable above
 4. Redeploy your application
 
 ## Database Status:
@@ -25,6 +26,4 @@ PORT=5000
 - `contact_messages` table (for contact form)
 
 ## Your Stack:
-- Frontend: Netlify (https://codeccraftt.netlify.app)
-- Backend: Pella.app (https://shocking-pinkskink.onpella.app)
-- Database: InfinityFree MySQL (sql308.infinityfree.com)
+- Backend: Pella.app (https://terra-cottapigeon.onpella.app)

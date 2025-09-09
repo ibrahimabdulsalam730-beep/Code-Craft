@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import mysql.connector
+from mysql.connector import pooling
 from mysql.connector import Error
 from datetime import datetime, timedelta
 import bcrypt
@@ -29,15 +29,23 @@ MYSQL_CONFIG = {
     'user': os.getenv('DB_USER', 'if0_39895620'),
     'password': os.getenv('DB_PASSWORD', 'km6BIIaPEx'),
     'database': os.getenv('DB_NAME', 'if0_39895620_codecraft'),
-    'port': int(os.getenv('DB_PORT', 3306))
+    'port': int(os.getenv('DB_PORT', 3306)),
+    'connect_timeout': 20 # Add a connection timeout
 }
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
+# Create a connection pool
+try:
+    db_connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **MYSQL_CONFIG)
+    logger.info("MySQL Connection Pool created successfully")
+except Error as e:
+    logger.error(f"Error while creating connection pool: {e}")
+    db_connection_pool = None
+
 def get_db_connection():
     try:
-        connection = mysql.connector.connect(**MYSQL_CONFIG)
-        return connection
+        return db_connection_pool.get_connection()
     except Error as e:
         logger.error(f"Database connection error: {str(e)}")
         raise
@@ -49,11 +57,14 @@ def root():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
+        if not db_connection_pool:
+            raise Exception("Database connection pool is not available.")
         connection = get_db_connection()
         cur = connection.cursor()
         cur.execute("SELECT 1")
         cur.close()
-        connection.close()
+        if connection.is_connected():
+            connection.close()
         
         return jsonify({
             'status': 'healthy',
