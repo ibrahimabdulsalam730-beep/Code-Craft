@@ -2,8 +2,8 @@
 const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 export const API_CONFIG = {
-  BASE_URL: isDevelopment ? 'http://localhost:5000' : 'https://terra-cottapigeon.onpella.app',
-  API_BASE_URL: isDevelopment ? 'http://localhost:5000/api' : 'https://terra-cottapigeon.onpella.app/api',
+  BASE_URL: isDevelopment ? 'http://localhost:5000' : 'https://redwolf.onpella.app',
+  API_BASE_URL: isDevelopment ? 'http://localhost:5000/api' : 'https://redwolf.onpella.app/api',
   TIMEOUT: 10000, // 10 seconds
 };
 

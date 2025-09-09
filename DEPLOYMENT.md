@@ -2,6 +2,9 @@
 
 ## Environment Variables to Set on Pella.app (or other hosting):
 ## Environment Variables to Set on Pella.app:
+## Environment Variables
+
+Set these in your backend hosting environment (e.g., Pella.app, Google Cloud Run).
 
 ```
 DB_HOST=sql308.infinityfree.com
