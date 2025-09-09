@@ -269,6 +269,34 @@ def handle_contact():
 def root():
     return jsonify({'message': 'CodeCraft API - Ready for Startup Demo!', 'success': True})
 
+@app.route('/api/users', methods=['GET'])
+@require_auth
+def get_users():
+    try:
+        db = load_db()
+        return jsonify({'success': True, 'users': db['users']})
+    except Exception as e:
+        return jsonify({'success': False, 'message': 'Error occurred'}), 500
+
+@app.route('/api/stats', methods=['GET'])
+@require_auth
+def get_stats():
+    try:
+        db = load_db()
+        total_users = len(db['users'])
+        admin_users = len([u for u in db['users'] if u.get('is_admin', False)])
+        return jsonify({
+            'success': True, 
+            'stats': {
+                'totalUsers': total_users,
+                'activeUsers': total_users,
+                'adminUsers': admin_users,
+                'newUsers': 0
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': 'Error occurred'}), 500
+
 @app.route('/make-admin/<email>', methods=['GET'])
 def make_admin(email):
     try:
