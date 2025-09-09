@@ -16,11 +16,12 @@ app = Flask(__name__)
 
 allowed_origins = [
     'https://codeccraftt.netlify.app',
-    'https://codeccraft.netlify.app',
+    'https://codeccraft.netlify.app', 
+    'https://codecraft2.netlify.app',
     'https://*.netlify.app',
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://celadonbuffalo.onpella.app',
+    'https://chestnutminnow.onpella.app',
 ]
 
 CORS(app, origins=allowed_origins, allow_headers=['Content-Type', 'Authorization'], 
