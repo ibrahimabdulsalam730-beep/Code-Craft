@@ -4,7 +4,7 @@ const isDevelopment = window.location.hostname === 'localhost' || window.locatio
 export const API_CONFIG = {
   BASE_URL: isDevelopment ? 'http://localhost:5000' : 'https://redwolf.onpella.app',
   API_BASE_URL: isDevelopment ? 'http://localhost:5000/api' : 'https://redwolf.onpella.app/api',
-  TIMEOUT: 10000, // 10 seconds
+  TIMEOUT: 30000, // 30 seconds - increased timeout
 };
 
 // Helper function to get full API endpoint

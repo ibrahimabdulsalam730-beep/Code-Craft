@@ -71,15 +71,25 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
+      console.log('Attempting registration to:', getApiUrl('/register'));
+      
       const response = await fetch(getApiUrl('/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name, email, password }),
+        mode: 'cors',
       });
 
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Registration response:', data);
 
       if (data.success) {
         setCurrentUser(data.user);
@@ -89,7 +99,8 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
-      return { success: false, message: 'Network error. Please try again.' };
+      console.error('Registration error:', error);
+      return { success: false, message: `Network error: ${error.message}. Please check if backend is running.` };
     }
   };
 
