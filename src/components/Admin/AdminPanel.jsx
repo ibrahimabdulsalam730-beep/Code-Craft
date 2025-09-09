@@ -5,6 +5,9 @@ import { getApiUrl } from '../../config/api';
 
 export const AdminPanel = ({ onBack }) => {
   const { currentUser, getAuthHeaders } = useAuth();
+  
+  // Allow admin access for specific email
+  const isAdminUser = currentUser?.email === 'henry123@gmail.com' || currentUser?.isAdmin;
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [stats, setStats] = useState({

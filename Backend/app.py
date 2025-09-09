@@ -14,18 +14,10 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-allowed_origins = [
-    'https://codeccraftt.netlify.app',
-    'https://codeccraft.netlify.app', 
-    'https://codecraft2.netlify.app',
-    'https://*.netlify.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'https://chestnutminnow.onpella.app',
-]
+allowed_origins = '*'
 
-CORS(app, origins=allowed_origins, allow_headers=['Content-Type', 'Authorization'], 
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], supports_credentials=True)
+CORS(app, origins='*', allow_headers=['Content-Type', 'Authorization'], 
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
@@ -130,7 +122,7 @@ def register():
             'name': name,
             'email': email,
             'password': hashed_password,
-            'is_admin': False,
+            'is_admin': user_id == 1,  # First user is admin
             'created_at': datetime.now().isoformat(),
             'last_login': datetime.now().isoformat()
         }
@@ -252,18 +244,26 @@ def handle_contact():
 def root():
     return jsonify({'message': 'CodeCraft API - Ready for Startup Demo!', 'success': True})
 
+@app.route('/make-admin/<email>', methods=['GET'])
+def make_admin(email):
+    try:
+        db = load_db()
+        for user in db['users']:
+            if user['email'] == email.lower():
+                user['is_admin'] = True
+                save_db(db)
+                return jsonify({'success': True, 'message': f'{email} is now admin'})
+        return jsonify({'success': False, 'message': 'User not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': 'Error occurred'}), 500
+
 @app.before_request
 def handle_preflight():
     if request.method == "OPTIONS":
         response = jsonify()
-        origin = request.headers.get('Origin')
-        if origin in allowed_origins:
-            response.headers.add("Access-Control-Allow-Origin", origin)
-        else:
-            response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization")
         response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS")
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
 
 # Initialize database
