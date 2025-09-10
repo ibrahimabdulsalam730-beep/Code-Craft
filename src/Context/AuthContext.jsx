@@ -44,7 +44,6 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -89,7 +88,6 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({ name, email, password }),
       });
 
@@ -121,7 +119,6 @@ export const AuthProvider = ({ children }) => {
         await fetch(getApiUrl('/logout'), {
           method: 'POST',
           headers: getAuthHeaders(),
-          credentials: 'include',
         });
       }
     } catch (error) {
