@@ -16,8 +16,10 @@ app = Flask(__name__)
 
 allowed_origins = '*'
 
-CORS(app, origins='*', allow_headers=['Content-Type', 'Authorization'], 
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+CORS(app, origins=['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173'], 
+     allow_headers=['Content-Type', 'Authorization', 'Access-Control-Allow-Credentials'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     supports_credentials=True)
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
@@ -425,13 +427,28 @@ def make_admin(email):
         logger.error(f"Make admin error: {e}")
         return jsonify({'success': False, 'message': 'Error occurred'}), 500
 
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    allowed_origins = ['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    return response
+
 @app.before_request
 def handle_preflight():
     if request.method == "OPTIONS":
         response = jsonify()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization")
-        response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS")
+        origin = request.headers.get('Origin')
+        allowed_origins = ['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
+        if origin in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         return response
 
 # Initialize database
