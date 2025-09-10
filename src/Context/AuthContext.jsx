@@ -37,15 +37,25 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('Attempting login to:', getApiUrl('/login'));
+      
       const response = await fetch(getApiUrl('/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Login response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Login response data:', data);
 
       if (data.success) {
         setCurrentUser(data.user);
@@ -65,7 +75,8 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
-      return { success: false, message: 'Network error. Please try again.' };
+      console.error('Login error:', error);
+      return { success: false, message: `Network error: ${error.message}. Please check if backend is running.` };
     }
   };
 
@@ -110,6 +121,7 @@ export const AuthProvider = ({ children }) => {
         await fetch(getApiUrl('/logout'), {
           method: 'POST',
           headers: getAuthHeaders(),
+          credentials: 'include',
         });
       }
     } catch (error) {
