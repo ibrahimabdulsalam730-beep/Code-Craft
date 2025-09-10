@@ -5,9 +5,9 @@ import bcrypt
 import secrets
 import re
 import os
-import json
 import logging
 from functools import wraps
+import sqlite3
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,20 +21,53 @@ CORS(app, origins='*', allow_headers=['Content-Type', 'Authorization'],
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
-# JSON Database
-DB_FILE = 'database.json'
+# SQLite Database Configuration
+DB_FILE = 'codecraft.db'
 active_sessions = {}
 
-def load_db():
+def get_db_connection():
     try:
-        with open(DB_FILE, 'r') as f:
-            return json.load(f)
-    except:
-        return {'users': [], 'contact_messages': [], 'next_user_id': 1}
+        connection = sqlite3.connect(DB_FILE)
+        connection.row_factory = sqlite3.Row
+        return connection
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        return None
 
-def save_db(data):
-    with open(DB_FILE, 'w') as f:
-        json.dump(data, f, default=str, indent=2)
+def init_database():
+    connection = get_db_connection()
+    if connection:
+        cursor = connection.cursor()
+        try:
+            # Create users table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    last_login TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create contact_messages table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS contact_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    message TEXT NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            connection.commit()
+            logger.info("Database tables initialized successfully")
+        except Exception as e:
+            logger.error(f"Database initialization error: {e}")
+        finally:
+            cursor.close()
+            connection.close()
 
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -109,42 +142,54 @@ def register():
         if not is_valid:
             return jsonify({'success': False, 'message': password_message}), 400
         
-        db = load_db()
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
         
-        for user in db['users']:
-            if user['email'] == email:
-                return jsonify({'success': False, 'message': 'Email already exists'}), 400
+        cursor = connection.cursor()
         
-        user_id = db['next_user_id']
+        # Check if email exists
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        if cursor.fetchone():
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'message': 'Email already exists'}), 400
+        
+        # Check if this is the first user (make admin)
+        cursor.execute("SELECT COUNT(*) FROM users")
+        user_count = cursor.fetchone()[0]
+        is_admin = 1 if user_count == 0 else 0
+        
         hashed_password = hash_password(password)
+        
+        cursor.execute("""
+            INSERT INTO users (name, email, password, is_admin, created_at, last_login)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, email, hashed_password, is_admin, datetime.now().isoformat(), datetime.now().isoformat()))
+        
+        user_id = cursor.lastrowid
+        connection.commit()
+        
         new_user = {
             'id': user_id,
             'name': name,
             'email': email,
-            'password': hashed_password,
-            'is_admin': user_id == 1,  # First user is admin
-            'created_at': datetime.now().isoformat(),
-            'last_login': datetime.now().isoformat()
+            'isAdmin': bool(is_admin),
+            'createdAt': datetime.now().isoformat(),
+            'lastLogin': datetime.now().isoformat()
         }
         
-        db['users'].append(new_user)
-        db['next_user_id'] += 1
-        save_db(db)
+        cursor.close()
+        connection.close()
         
         return jsonify({
             'success': True,
             'message': 'Account created successfully',
-            'user': {
-                'id': new_user['id'],
-                'name': new_user['name'],
-                'email': new_user['email'],
-                'isAdmin': new_user['is_admin'],
-                'createdAt': new_user['created_at'],
-                'lastLogin': new_user['last_login']
-            }
+            'user': new_user
         }), 201
         
     except Exception as e:
+        logger.error(f"Registration error: {e}")
         return jsonify({'success': False, 'message': 'Server error occurred'}), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -185,28 +230,38 @@ def login():
                 'token': session_token
             }), 200
         
-        db = load_db()
-        user = None
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
         
-        for u in db['users']:
-            if u['email'] == email:
-                user = u
-                break
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        user_row = cursor.fetchone()
         
-        if not user or not verify_password(password, user['password']):
+        if not user_row:
+            cursor.close()
+            connection.close()
             return jsonify({'success': False, 'message': 'Invalid email or password'}), 401
         
-        user['last_login'] = datetime.now().isoformat()
-        save_db(db)
+        user = dict(user_row)
+        
+        if not verify_password(password, user['password']):
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'message': 'Invalid email or password'}), 401
+        
+        # Update last login
+        cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (datetime.now().isoformat(), user['id']))
+        connection.commit()
         
         session_token = generate_session_token()
         user_data = {
             'id': user['id'],
             'name': user['name'],
             'email': user['email'],
-            'isAdmin': user['is_admin'],
+            'isAdmin': bool(user['is_admin']),
             'createdAt': user['created_at'],
-            'lastLogin': user['last_login']
+            'lastLogin': datetime.now().isoformat()
         }
         
         active_sessions[session_token] = {
@@ -214,6 +269,9 @@ def login():
             'created': datetime.now(),
             'expires': datetime.now() + timedelta(hours=24)
         }
+        
+        cursor.close()
+        connection.close()
         
         return jsonify({
             'success': True,
@@ -223,6 +281,7 @@ def login():
         }), 200
         
     except Exception as e:
+        logger.error(f"Login error: {e}")
         return jsonify({'success': False, 'message': 'Server error occurred'}), 500
 
 @app.route('/api/logout', methods=['POST'])
@@ -238,11 +297,23 @@ def logout():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    try:
+        connection = get_db_connection()
+        if connection:
+            connection.close()
+            db_status = 'connected'
+        else:
+            db_status = 'disconnected'
+    except Exception as e:
+        db_status = 'disconnected'
+        logger.error(f"Health check DB error: {e}")
+    
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'database': 'json_file',
-        'message': 'CodeCraft API - JSON Database Ready!'
+        'database': 'sqlite',
+        'database_status': db_status,
+        'message': 'CodeCraft API - SQLite Database Ready!'
     }), 200
 
 @app.route('/contact', methods=['POST'])
@@ -254,15 +325,20 @@ def handle_contact():
         if not message:
             return jsonify({'error': 'Message cannot be empty'}), 400
 
-        db = load_db()
-        db['contact_messages'].append({
-            'message': message,
-            'created_at': datetime.now().isoformat()
-        })
-        save_db(db)
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("INSERT INTO contact_messages (message, created_at) VALUES (?, ?)", 
+                      (message, datetime.now().isoformat()))
+        connection.commit()
+        cursor.close()
+        connection.close()
 
         return jsonify({'success': 'Message received successfully'}), 200
     except Exception as e:
+        logger.error(f"Contact error: {e}")
         return jsonify({'error': 'Server error occurred'}), 500
 
 @app.route('/', methods=['GET'])
@@ -273,18 +349,46 @@ def root():
 @require_auth
 def get_users():
     try:
-        db = load_db()
-        return jsonify({'success': True, 'users': db['users']})
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("SELECT id, name, email, is_admin, created_at, last_login FROM users")
+        users_rows = cursor.fetchall()
+        
+        users = []
+        for row in users_rows:
+            user = dict(row)
+            user['is_admin'] = bool(user['is_admin'])
+            users.append(user)
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({'success': True, 'users': users})
     except Exception as e:
+        logger.error(f"Get users error: {e}")
         return jsonify({'success': False, 'message': 'Error occurred'}), 500
 
 @app.route('/api/stats', methods=['GET'])
 @require_auth
 def get_stats():
     try:
-        db = load_db()
-        total_users = len(db['users'])
-        admin_users = len([u for u in db['users'] if u.get('is_admin', False)])
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1")
+        admin_users = cursor.fetchone()[0]
+        
+        cursor.close()
+        connection.close()
+        
         return jsonify({
             'success': True, 
             'stats': {
@@ -295,19 +399,30 @@ def get_stats():
             }
         })
     except Exception as e:
+        logger.error(f"Get stats error: {e}")
         return jsonify({'success': False, 'message': 'Error occurred'}), 500
 
 @app.route('/make-admin/<email>', methods=['GET'])
 def make_admin(email):
     try:
-        db = load_db()
-        for user in db['users']:
-            if user['email'] == email.lower():
-                user['is_admin'] = True
-                save_db(db)
-                return jsonify({'success': True, 'message': f'{email} is now admin'})
-        return jsonify({'success': False, 'message': 'User not found'})
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("UPDATE users SET is_admin = 1 WHERE email = ?", (email.lower(),))
+        
+        if cursor.rowcount > 0:
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return jsonify({'success': True, 'message': f'{email} is now admin'})
+        else:
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'message': 'User not found'})
     except Exception as e:
+        logger.error(f"Make admin error: {e}")
         return jsonify({'success': False, 'message': 'Error occurred'}), 500
 
 @app.before_request
@@ -320,8 +435,7 @@ def handle_preflight():
         return response
 
 # Initialize database
-if not os.path.exists(DB_FILE):
-    save_db({'users': [], 'contact_messages': [], 'next_user_id': 1})
+init_database()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
