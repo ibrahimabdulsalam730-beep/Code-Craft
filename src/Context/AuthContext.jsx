@@ -89,8 +89,8 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ name, email, password }),
-        mode: 'cors',
       });
 
       console.log('Response status:', response.status);

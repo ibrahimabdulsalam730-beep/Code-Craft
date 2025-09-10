@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-import axios from 'axios';
-import { getApiUrl } from './config/api';
+import { getBaseUrl } from './config/api';
 
 const Contact = () => {
   const [message, setMessage] = useState('');
@@ -18,21 +17,25 @@ const Contact = () => {
     }
 
     try {
-      const response = await axios.post('https://chestnutminnow.onpella.app/contact', { 
-        message 
-      }, {
+      const response = await fetch(getBaseUrl('/contact'), {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include',
+        body: JSON.stringify({ message })
       });
       
-      if (response.status === 200) {
+      if (response.ok) {
         setSubmitted(true);
         setMessage('');
         setTimeout(() => setSubmitted(false), 5000); // Reset form after 5 seconds
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to send message. Please try again later.');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to send message. Please try again later.');
+      setError('Failed to send message. Please try again later.');
       console.error('Contact form submission error:', err);
     }
   };
