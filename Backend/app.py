@@ -16,16 +16,15 @@ app = Flask(__name__)
 
 allowed_origins = '*'
 
-CORS(app, origins=['https://codeccraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173'], 
+CORS(app, origins='*', 
      allow_headers=['Content-Type', 'Authorization', 'Access-Control-Allow-Credentials'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-     supports_credentials=True)
+     supports_credentials=False)
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 # SQLite Database Configuration
 DB_FILE = 'codecraft.db'
-active_sessions = {}
 
 def get_db_connection():
     try:
@@ -60,6 +59,17 @@ def init_database():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     message TEXT NOT NULL,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create sessions table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_token TEXT UNIQUE NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TEXT NOT NULL
                 )
             """)
             
@@ -111,15 +121,46 @@ def require_auth(f):
             return jsonify({'success': False, 'message': 'Authentication required'}), 401
         
         token = token.replace('Bearer ', '')
-        if token not in active_sessions:
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+            
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM sessions WHERE session_token = ?", (token,))
+        session = cursor.fetchone()
+        
+        if not session:
+            cursor.close()
+            connection.close()
             return jsonify({'success': False, 'message': 'Invalid or expired session'}), 401
-        
-        session_data = active_sessions[token]
-        if datetime.now() > session_data['expires']:
-            del active_sessions[token]
+            
+        session_dict = dict(session)
+        expires_at = datetime.fromisoformat(session_dict['expires_at'])
+        if datetime.now() > expires_at:
+            cursor.execute("DELETE FROM sessions WHERE session_token = ?", (token,))
+            connection.commit()
+            cursor.close()
+            connection.close()
             return jsonify({'success': False, 'message': 'Session expired'}), 401
+
+        cursor.execute("SELECT * FROM users WHERE id = ?", (session_dict['user_id'],))
+        user_row = cursor.fetchone()
         
-        request.current_user = session_data['user']
+        if not user_row:
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'message': 'User not found'}), 401
+
+        user = dict(user_row)
+        request.current_user = {
+            'id': user['id'],
+            'name': user['name'],
+            'email': user['email'],
+            'isAdmin': bool(user['is_admin'])
+        }
+        cursor.close()
+        connection.close()
         return f(*args, **kwargs)
     return decorated_function
 
@@ -219,11 +260,17 @@ def login():
                 'lastLogin': datetime.now().isoformat()
             }
             
-            active_sessions[session_token] = {
-                'user': admin_user,
-                'created': datetime.now(),
-                'expires': datetime.now() + timedelta(hours=24)
-            }
+            connection = get_db_connection()
+            if connection:
+                cursor = connection.cursor()
+                expires_at = datetime.now() + timedelta(hours=24)
+                cursor.execute("""
+                    INSERT INTO sessions (session_token, user_id, expires_at)
+                    VALUES (?, ?, ?)
+                """, (session_token, 999, expires_at.isoformat()))
+                connection.commit()
+                cursor.close()
+                connection.close()
             
             return jsonify({
                 'success': True,
@@ -266,11 +313,12 @@ def login():
             'lastLogin': datetime.now().isoformat()
         }
         
-        active_sessions[session_token] = {
-            'user': user_data,
-            'created': datetime.now(),
-            'expires': datetime.now() + timedelta(hours=24)
-        }
+        expires_at = datetime.now() + timedelta(hours=24)
+        cursor.execute("""
+            INSERT INTO sessions (session_token, user_id, expires_at)
+            VALUES (?, ?, ?)
+        """, (session_token, user['id'], expires_at.isoformat()))
+        connection.commit()
         
         cursor.close()
         connection.close()
@@ -291,8 +339,13 @@ def login():
 def logout():
     try:
         token = request.headers.get('Authorization').replace('Bearer ', '')
-        if token in active_sessions:
-            del active_sessions[token]
+        connection = get_db_connection()
+        if connection:
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM sessions WHERE session_token = ?", (token,))
+            connection.commit()
+            cursor.close()
+            connection.close()
         return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
     except Exception as e:
         return jsonify({'success': False, 'message': 'Server error occurred'}), 500
@@ -429,11 +482,7 @@ def make_admin(email):
 
 @app.after_request
 def after_request(response):
-    origin = request.headers.get('Origin')
-    allowed_origins = ['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
-    if origin in allowed_origins:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     return response
@@ -442,11 +491,7 @@ def after_request(response):
 def handle_preflight():
     if request.method == "OPTIONS":
         response = jsonify()
-        origin = request.headers.get('Origin')
-        allowed_origins = ['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
-        if origin in allowed_origins:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         return response
