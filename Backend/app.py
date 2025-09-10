@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 allowed_origins = '*'
 
-CORS(app, origins=['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173'], 
+CORS(app, origins=['https://codeccraftt.netlify.app', 'https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173'], 
      allow_headers=['Content-Type', 'Authorization', 'Access-Control-Allow-Credentials'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      supports_credentials=True)
@@ -430,7 +430,7 @@ def make_admin(email):
 @app.after_request
 def after_request(response):
     origin = request.headers.get('Origin')
-    allowed_origins = ['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
+    allowed_origins = ['https://codeccraftt.netlify.app', 'https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
     if origin in allowed_origins:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
@@ -443,7 +443,7 @@ def handle_preflight():
     if request.method == "OPTIONS":
         response = jsonify()
         origin = request.headers.get('Origin')
-        allowed_origins = ['https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
+        allowed_origins = ['https://codeccraftt.netlify.app', 'https://codecraftt.netlify.app', 'http://localhost:3000', 'http://localhost:5173']
         if origin in allowed_origins:
             response.headers['Access-Control-Allow-Origin'] = origin
             response.headers['Access-Control-Allow-Credentials'] = 'true'
