@@ -37,9 +37,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      console.log('Attempting login to:', getApiUrl('/login'));
+      const loginUrl = getApiUrl('/login');
+      console.log('=== LOGIN DEBUG ===');
+      console.log('Login URL:', loginUrl);
+      console.log('User Agent:', navigator.userAgent);
+      console.log('Location:', window.location.href);
       
-      const response = await fetch(getApiUrl('/login'), {
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,14 +51,17 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      console.log('Login response status:', response.status);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Login response data:', data);
+      console.log('Login success:', data);
 
       if (data.success) {
         setCurrentUser(data.user);
