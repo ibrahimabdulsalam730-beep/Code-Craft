@@ -22,7 +22,7 @@ code-craft-2/
 
 - **Frontend**: Deployed on Netlify
 - **Backend**: Deployed on Pella.app (https://chestnutminnow.onpella.app)
-- **Database**: MySQL on InfinityFree
+- **Database**: PostgreSQL (Supabase/Neon/Railway)
 
 ## API Endpoints
 

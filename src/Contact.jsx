@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { getBaseUrl } from './config/api';
 
 const Contact = () => {
   const [message, setMessage] = useState('');
@@ -16,27 +15,13 @@ const Contact = () => {
       return;
     }
 
-    try {
-      const response = await fetch(getBaseUrl('/contact'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ message })
-      });
-      
-      if (response.ok) {
-        setSubmitted(true);
-        setMessage('');
-        setTimeout(() => setSubmitted(false), 5000); // Reset form after 5 seconds
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to send message. Please try again later.');
-      }
-    } catch (err) {
-      setError('Failed to send message. Please try again later.');
-      console.error('Contact form submission error:', err);
-    }
+    // Simulate local submission since backend is removed
+    console.log('Submitted message:', message);
+    setSubmitted(true);
+    setMessage('');
+    setTimeout(() => {
+      setSubmitted(false);
+    }, 5000); // Reset form after 5 seconds
   };
 
   return (

@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { useAuth } from './Context/AuthContext';
 
 function CSS() {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
 
   useEffect(() => {
             // Scroll to top when component mounts
@@ -35,18 +33,6 @@ function CSS() {
             };
           }, []);
           
-  const handleLoginRedirect = () => {
-    navigate('/login');
-      };
-
-      const handleLogout = () => {
-        logout();
-        navigate('/login');
-      };
-
-      const handleJavascriptClick = () => {
-        navigate('/javascript'); // Navigate to the login page when a button is clicked
-    };
 
   const handleButtonClick1 = (e) => {
     // Only change if not already green
@@ -68,6 +54,12 @@ function CSS() {
   }
   }
 
+
+  const handleJavascriptClick = () => {
+        navigate('/javascript');
+    };
+
+
   return (
         <>
          <div className="container mx-auto flex flex-wrap p-5 flex-col md:flex-row items-center">
@@ -78,26 +70,6 @@ function CSS() {
                     <a onClick={() => navigate('/contact')} className="mr-5 hover:text-gray-900 cursor-pointer">Contact</a>
                     <a onClick={() => navigate('/about')} className="mr-5 hover:text-gray-900 cursor-pointer">About</a>
                 </nav>
-                <div className="flex items-center">
-                    {currentUser ? (
-                        <>
-                            <span className="mr-5 text-gray-900">Welcome, {currentUser.name}!</span>
-                            <button
-                                onClick={handleLogout}
-                                className="inline-flex items-center bg-red-100 border-0 py-1 px-3 focus:outline-none hover:bg-red-200 rounded text-base mt-4 md:mt-0 cursor-pointer"
-                            >
-                                Logout
-                            </button>
-                        </>
-                    ) : (
-                        <button
-                            onClick={handleLoginRedirect}
-                            className="inline-flex items-center bg-gray-100 border-0 py-1 px-3 focus:outline-none hover:bg-gray-200 rounded text-base mt-4 md:mt-0 cursor-pointer"
-                        >
-                            Login
-                        </button>
-                    )}
-                </div>
             </div>
             <br />
             <div className="container mx-auto flex px-5 py-24 items-center justify-center flex-col">

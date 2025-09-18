@@ -5,13 +5,10 @@ import { useNavigate } from 'react-router-dom';
 
 function Home() {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [data, setData] = useState(null);
 
     // Define the handleLoginClick function
-    const handleLoginClick = () => {
-        navigate('/login'); // Navigate to the login page when a button is clicked
+    const handlepythonClick = () => {
+        navigate('/python1'); // Navigate to the login page when a button is clicked
     };
 
     useEffect(() => {
@@ -20,22 +17,6 @@ function Home() {
             once: true      // animation happens only once
         });
     }, []);
-
-    const fetchData = async () => {
-        try {
-            const response = await fetch('/api/home');
-            if (!response.ok) throw new Error('Network response was not ok');
-            const result = await response.json();
-            setData(result);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // if (loading) return <div>Loading...</div>;
-    // if (error) return <div>Error: {error}</div>;
 
     
   return (
@@ -50,12 +31,6 @@ function Home() {
             <a onClick={() => navigate('/contact')} className="mr-5 hover:text-gray-900 cursor-pointer">Contact</a>
             <a onClick={() => navigate('/about')} className="mr-5 hover:text-gray-900 cursor-pointer">About</a>
           </nav>
-          <button className="inline-flex items-center bg-gray-100 border-0 py-1 px-3 focus:outline-none hover:bg-gray-200 rounded text-base mt-4 md:mt-0 cursor-pointer" onClick={handleLoginClick}>
-            Login
-            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-4 h-4 ml-1" viewBox="0 0 24 24">
-              <path d="M5 12h14M12 5l7 7-7 7"></path>
-            </svg>
-          </button>
         </div>
       </header>
       {/* the second part with animation */}
@@ -125,8 +100,8 @@ function Home() {
             </div>
           </div>
           <button
-            className="flex mx-auto mt-16 text-white bg-indigo-500 border-0 py-2 px-8 focus:outline-none hover:bg-indigo-600 rounded text-lg"data-aos="fade-up" onClick={handleLoginClick}>
-            Login
+            className="flex mx-auto mt-16 text-white bg-indigo-500 border-0 py-2 px-8 focus:outline-none hover:bg-indigo-600 rounded text-lg"data-aos="fade-up" onClick={handlepythonClick}>
+            Let's get Started 😁
           </button>
         </div>
       </section>
@@ -136,56 +111,56 @@ function Home() {
       <a className="flex title-font font-medium items-center md:justify-start justify-center text-gray-900">
         <img onClick={() => navigate('/home')} src="/logo.jpg" alt="Logo" className="h-10 w-25" />
       </a>
-      <p class="mt-2 text-sm text-gray-500">Code with Precision, Build with Passion</p>
+      <p className="mt-2 text-sm text-gray-500">Code with Precision, Build with Passion</p>
     </div>
-    <div class="flex-grow flex flex-wrap md:pl-20 -mb-10 md:mt-0 mt-10 md:text-left text-center">
-      <div class="lg:w-1/4 md:w-1/2 w-full px-4">
-        <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Full-Stack Projects</h2>
-        <nav class="list-none mb-10">
+    <div className="flex-grow flex flex-wrap md:pl-20 -mb-10 md:mt-0 mt-10 md:text-left text-center">
+      <div className="lg:w-1/4 md:w-1/2 w-full px-4">
+        <h2 className="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Full-Stack Projects</h2>
+        <nav className="list-none mb-10">
           <li>
-            <a onClick={() => navigate('/python1')} class="text-gray-600 hover:text-gray-800">Python</a>
+            <a onClick={() => navigate('/python1')} className="text-gray-600 hover:text-gray-800">Python</a>
           </li>
           <li>
-            <a onClick={() => navigate('/html')} class="text-gray-600 hover:text-gray-800">HTML</a>
+            <a onClick={() => navigate('/html')} className="text-gray-600 hover:text-gray-800">HTML</a>
           </li>
           <li>
-            <a onClick={() => navigate('/css')} class="text-gray-600 hover:text-gray-800">CSS</a>
+            <a onClick={() => navigate('/css')} className="text-gray-600 hover:text-gray-800">CSS</a>
           </li>
           <li>
-            <a onClick={() => navigate('/javascript')} class="text-gray-600 hover:text-gray-800">JavaScript</a>
+            <a onClick={() => navigate('/javascript')} className="text-gray-600 hover:text-gray-800">JavaScript</a>
           </li>
           <li>
-            <a onClick={() => navigate('/mysql')} class="text-gray-600 hover:text-gray-800">MySQL</a>
-          </li>
-        </nav>
-      </div>
-      <div class="lg:w-1/4 md:w-1/2 w-full px-4">
-        <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Front-end</h2>
-        <nav class="list-none mb-10">
-          <li>
-            <a onClick={() => navigate('/html')} class="text-gray-600 hover:text-gray-800">HTML</a>
-          </li>
-          <li>
-            <a onClick={() => navigate('/css')} class="text-gray-600 hover:text-gray-800">CSS</a>
-          </li>
-          <li>
-            <a onClick={() => navigate('/javascript')} class="text-gray-600 hover:text-gray-800">JavaScript</a>
+            <a onClick={() => navigate('/mysql')} className="text-gray-600 hover:text-gray-800">MySQL</a>
           </li>
         </nav>
       </div>
-      <div class="lg:w-1/4 md:w-1/2 w-full px-4">
-        <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Backend</h2>
-        <nav class="list-none mb-10">
+      <div className="lg:w-1/4 md:w-1/2 w-full px-4">
+        <h2 className="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Front-end</h2>
+        <nav className="list-none mb-10">
           <li>
-            <a onClick={() => navigate('/python1')} class="text-gray-600 hover:text-gray-800">Python</a>
+            <a onClick={() => navigate('/html')} className="text-gray-600 hover:text-gray-800">HTML</a>
+          </li>
+          <li>
+            <a onClick={() => navigate('/css')} className="text-gray-600 hover:text-gray-800">CSS</a>
+          </li>
+          <li>
+            <a onClick={() => navigate('/javascript')} className="text-gray-600 hover:text-gray-800">JavaScript</a>
           </li>
         </nav>
       </div>
-      <div class="lg:w-1/4 md:w-1/2 w-full px-4">
-        <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Database</h2>
-        <nav class="list-none mb-10">
+      <div className="lg:w-1/4 md:w-1/2 w-full px-4">
+        <h2 className="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Backend</h2>
+        <nav className="list-none mb-10">
           <li>
-            <a onClick={() => navigate('/mysql')} class="text-gray-600 hover:text-gray-800">MySQL</a>
+            <a onClick={() => navigate('/python1')} className="text-gray-600 hover:text-gray-800">Python</a>
+          </li>
+        </nav>
+      </div>
+      <div className="lg:w-1/4 md:w-1/2 w-full px-4">
+        <h2 className="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Database</h2>
+        <nav className="list-none mb-10">
+          <li>
+            <a onClick={() => navigate('/mysql')} className="text-gray-600 hover:text-gray-800">MySQL</a>
           </li>
         </nav>
       </div>
