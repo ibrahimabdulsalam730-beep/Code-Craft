@@ -1,13 +1,21 @@
-
-[build]
-  # Build command for React + Vite app
-  command = "npm run build"
-  
-  # Publish the built files from dist directory
-  publish = "dist/"
-
-# Redirect rules for React Router (SPA)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+ # Netlify configuration file
+ 
+ [build]
+   # This command is run to build your site
+   command = "npm run build"
+   # The directory where your built files are located
+   publish = "dist"
+ 
+ [dev]
+   # Local dev command
+   command = "npm run dev"
+   # The port for the local dev server
+   port = 5173
+ 
+ [[redirects]]
+   # This rule is for Single Page Applications (SPA) like React.
+   # It ensures that all paths are served by index.html,
+   # allowing React Router to handle client-side routing.
+   from = "/*"
+   to = "/index.html"
+   status = 200
